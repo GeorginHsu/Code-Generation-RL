@@ -6,14 +6,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import glob
 import os
 from PIL import Image
-import numpy as np  # 必须导入numpy
+import numpy as np 
 
-# 配置模型路径和设备
-MODEL_PATH = "/share/imagereward_work/xjj/database/model/cogvlm2-llama3-chat-19B"
+MODEL_PATH = "/share/imagereward_work/xjj/database/model/cogvlm2-llama3-chat-19B" ## change to your model path
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 TORCH_TYPE = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16
 
-# 初始化tokenizer和model
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, torch_dtype=TORCH_TYPE, trust_remote_code=True).to(DEVICE).eval()
 
@@ -57,10 +55,8 @@ def generate_code(model, tokenizer, description):
         return generated_code.strip()
 
 def process_parquet_file(input_file, results):
-    # 读取 Parquet 文件
-    df = pd.read_parquet(input_file)[:1]
+    df = pd.read_parquet(input_file)
     
-    # 确保数据包含 'description' 和 'public_tests' 列
     if 'description' not in df.columns or 'public_tests' not in df.columns:
         raise ValueError("Parquet file must contain 'description' and 'public_tests' columns")
 
@@ -80,25 +76,21 @@ def process_parquet_file(input_file, results):
 def process_all_parquet_files(input_dir, output_file):
     results = []
 
-    # 查找所有以 'test' 开头的 Parquet 文件
     input_files = glob.glob(os.path.join(input_dir, 'test*.parquet'))
 
-    for input_file in input_files[:1]:
+    for input_file in input_files:
         process_parquet_file(input_file, results)
         
-    # 将结果保存到 JSONL 文件
     with open(output_file, 'w', encoding='utf-8') as outfile:
         for result in results:
             json.dump(result, outfile)
             outfile.write('\n')
 
-# 文件路径
-input_dir = '/share/home/xujiajun/dataset/code_contests/data'
+
+input_dir = '/share/home/xujiajun/dataset/code_contests/data'  ## take code_contests as an example
 output_dir = '/share/home/xujiajun/RL'
 output_file = os.path.join(output_dir, 'code.jsonl')
 
-# 确保输出目录存在
 os.makedirs(output_dir, exist_ok=True)
 
-# 处理所有数据集
 process_all_parquet_files(input_dir, output_file)
